@@ -1,0 +1,64 @@
+# Part 1 lab — telnetd + tcpdump sidecar + client, all in one Pod.
+# The point: run `kubectl cp` afterwards, open the pcap, and read your own
+# password in cleartext. That's the 1990s trust model in one screen.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: telnet-demo
+  labels:
+    app: telnet-demo
+    series: the-road-2-zerotrust
+    part: "1"
+spec:
+  # Lets the sniffer see the same loopback stream telnetd is writing to.
+  shareProcessNamespace: true
+  restartPolicy: Never
+  containers:
+    # --- telnet server -------------------------------------------------
+    - name: telnetd
+      image: nicolaka/netshoot:latest
+      command:
+        - /bin/bash
+        - -c
+        - |
+          set -eu
+          # Create a demo user with a known password
+          adduser -D demo 2>/dev/null || useradd -m demo
+          echo "demo:demo" | chpasswd
+          # Start a foreground telnet server on :23
+          apk add --no-cache busybox-extras 2>/dev/null || true
+          exec telnetd -F -l /bin/login -p 23
+      ports:
+        - name: telnet
+          containerPort: 23
+      securityContext:
+        # telnetd binds :23 (privileged) — keep it simple for the lab
+        capabilities:
+          add: ["NET_BIND_SERVICE"]
+
+    # --- packet sniffer -----------------------------------------------
+    - name: sniffer
+      image: nicolaka/netshoot:latest
+      command:
+        - /bin/bash
+        - -c
+        - |
+          set -eu
+          mkdir -p /tmp/cap
+          exec tcpdump -i any -s 0 -A port 23 -w /tmp/cap/telnet.pcap
+      volumeMounts:
+        - name: cap
+          mountPath: /tmp/cap
+      securityContext:
+        capabilities:
+          add: ["NET_ADMIN", "NET_RAW"]
+
+    # --- handy client -------------------------------------------------
+    - name: client
+      image: nicolaka/netshoot:latest
+      command: ["/bin/sh", "-c", "sleep infinity"]
+      # `kubectl exec -it telnet-demo -c client -- telnet 127.0.0.1 23`
+
+  volumes:
+    - name: cap
+      emptyDir: {}
