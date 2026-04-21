@@ -138,29 +138,6 @@ That protocol, of course, was SSH. In Part 2, we'll look at how it replaced teln
 
 ---
 
-## Social Snippets
-
-### LinkedIn
-Before the internet was *the* internet, it was "our network." Cleartext protocols like telnet and rsh weren't careless — they were a rational response to a world where the cardkey was the security boundary. That world is gone, but the relics are still in production.
-
-Part 1 of a seven-part series on the evolution of remote access — from trusted wires to Zero Trust. Each post ships a local k3d lab you can run in minutes. This one walks through why cleartext ever made sense, what broke, and previews how DNS quietly becomes a first-class security plane by the end of the series.
-
-#DevOps #ZeroTrust #Networking #Security #PlatformEngineering
-
-### X (Twitter)
-Before the internet was *the* internet, it was "our network." telnet and rsh weren't careless — they were the right answer to a trusted-wire world. Part 1 of a 7-part series on the evolution of remote access is up.
-
-#DevOps #ZeroTrust #Networking
-
-### Facebook
-New blog series: "From Trusted Wires to Zero Trust." Part 1 is out — a short history of why we ever sent passwords in the clear, and why every remote-access control since traces back to the moment the wire stopped being trusted. Includes a tiny k3d lab you can run in five minutes to watch your own telnet password fly past in Wireshark.
-
-### Instagram
-From trusted wires to Zero Trust — Part 1 of 7. Why cleartext protocols weren't careless, and what broke. Lab included. 🔐🪢
-
-#DevOps #ZeroTrust #Networking #PlatformEngineering #Kubernetes
-
----
 
 ## Further Reading
 
