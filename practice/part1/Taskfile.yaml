@@ -1,0 +1,40 @@
+version: '3'
+
+tasks:
+  info:
+    desc: Print part title, blog URL, prereqs, and description
+    cmds:
+      - 'echo "Part 1 — Trusted Wires: Capture Your Own telnet Password"'
+      - 'echo "Blog: https://portfolio.hagzag.com/blog/from-trusted-wires-to-the-open-internet/"'
+      - 'echo "Prereqs: docker, k3d, kubectl, tshark (or wireshark)"'
+      - 'echo ""'
+      - 'echo "Description: Capture telnet password in pcap using k3d and tcpdump to see cleartext credentials on the wire."'
+
+  check-prereqs:
+    desc: Check required tools are installed
+    cmds:
+      - |
+        for tool in docker k3d kubectl; do
+          if ! command -v $tool &> /dev/null; then
+            echo "ERROR: $tool not found"
+            echo "Install: brew install $tool (macOS) or apt install $tool (Linux)"
+            exit 1
+          fi
+        done
+        if ! command -v tshark &> /dev/null && ! command -v wireshark &> /dev/null; then
+          echo "ERROR: tshark or wireshark not found"
+          echo "Install: brew install wireshark (macOS) or apt install tshark (Linux)"
+          exit 1
+        fi
+        echo "All prereqs satisfied"
+
+  run:
+    desc: Execute ./run.sh after prereq check
+    deps: [check-prereqs]
+    cmds:
+      - ./run.sh
+
+  cleanup:
+    desc: Execute ./cleanup.sh
+    cmds:
+      - ./cleanup.sh
