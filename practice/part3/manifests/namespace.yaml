@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openvpn-lab
+  labels:
+    series: the-road-2-zerotrust
+    part: "3"

@@ -1,0 +1,40 @@
+# Part 3 — OpenVPN client Pod.
+# The client.ovpn is injected via a ConfigMap created by run.sh after
+# the server's PKI init completes. Bundles tcpdump (via netshoot) so
+# capture.sh can sniff UDP/1194 on the pod's interface.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openvpn-client
+  namespace: openvpn-lab
+  labels: { app: openvpn-client }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: openvpn-client } }
+  template:
+    metadata: { labels: { app: openvpn-client } }
+    spec:
+      shareProcessNamespace: true
+      containers:
+        - name: ovpn-client
+          image: kylemanna/openvpn:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              exec openvpn --config /config/client.ovpn --verb 3
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - { name: client-config, mountPath: /config, readOnly: true }
+        - name: sniffer
+          image: nicolaka/netshoot:latest
+          command: ["/bin/sh","-c","sleep infinity"]
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN", "NET_RAW"]
+      volumes:
+        - name: client-config
+          configMap:
+            name: client-ovpn

@@ -1,0 +1,81 @@
+version: '3'
+
+set: [errexit, pipefail]
+
+tasks:
+  info:
+    desc: Print part title, blog URL, prereqs, and description
+    silent: true
+    cmds:
+      - 'echo "Part 3 — OpenVPN in k3d, plus a DPI Fingerprinter"'
+      - 'echo "Blog: https://portfolio.hagzag.com/blog/vpns-openvpn-ipsec-and-the-tls-tunnel/"'
+      - 'echo "Prereqs: docker, k3d, kubectl, python3, scapy, tcpdump"'
+      - 'echo "Description: OpenVPN in k3d with DPI fingerprinting classifier - detect OpenVPN by opcode analysis."'
+
+  check-prereqs:
+    desc: Check required tools are installed
+    cmds:
+      - |
+        for tool in docker k3d kubectl python3 tcpdump; do
+          if ! command -v $tool &> /dev/null; then
+            echo "ERROR: $tool not found"
+            echo "Install: brew install $tool (macOS) or apt install $tool (Linux)"
+            exit 1
+          fi
+        done
+        python3 -c "import scapy" 2>/dev/null || { echo "ERROR: scapy not found"; echo "Install: pip install scapy"; exit 1; }
+        echo "All prereqs satisfied"
+
+  run:
+    desc: Execute ./run.sh after prereq check
+    deps: [check-prereqs]
+    cmds:
+      - ./run.sh
+
+  capture:
+    desc: Execute ./capture.sh to capture VPN traffic
+    cmds:
+      - ./capture.sh
+
+  classify:
+    desc: Run Python classifier on captured pcap
+    cmds:
+      - python3 classify.py ./openvpn.pcap
+
+  test:
+    desc: Verify the lab is working correctly (Part 3 assertions)
+    cmds:
+      - |
+        set -euo pipefail
+        fail() { echo "FAIL: $1"; exit 1; }
+        ok()   { echo "OK:   $1"; }
+
+        # 1. k3d cluster openvpn-lab exists
+        k3d cluster list --no-headers 2>/dev/null | awk '{print $1}' | grep -qx "openvpn-lab" || fail "cluster openvpn-lab does not exist"
+        ok "cluster openvpn-lab exists"
+
+        # 2. Deployments available
+        kubectl -n openvpn-lab rollout status deploy/openvpn-server deploy/openvpn-client --timeout=30s || fail "rollout failed"
+        ok "all deployments available"
+
+        # 3. Tunnel completed
+        kubectl -n openvpn-lab logs deploy/openvpn-client -c ovpn-client 2>/dev/null | grep -q 'Initialization Sequence Completed' || fail "tunnel not established"
+        ok "tunnel established (Initialization Sequence Completed)"
+
+        # 4-5. Check pcap (optional, warn if absent)
+        if [ -s ./openvpn.pcap ]; then
+          ok "openvpn.pcap exists and is non-empty"
+          python3 classify.py ./openvpn.pcap | grep -qi 'openvpn' || fail "classify.py verdict does not contain 'OpenVPN'"
+          ok "classify.py verdict contains 'OpenVPN'"
+        else
+          echo "WARN: ./openvpn.pcap not found or empty — skipping assertions 4-5"
+          echo "      Run 'task capture' first, then 'task test'"
+        fi
+
+        echo ""
+        echo "=== All Part 3 tests passed ==="
+
+  cleanup:
+    desc: Execute ./cleanup.sh
+    cmds:
+      - ./cleanup.sh

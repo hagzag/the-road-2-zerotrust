@@ -1,0 +1,76 @@
+# Part 3 — OpenVPN server (UDP/1194).
+# Uses the kylemanna/openvpn image; a one-shot init container provisions
+# PKI via easy-rsa so the lab is self-contained.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openvpn-data
+  namespace: openvpn-lab
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 100Mi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openvpn-server
+  namespace: openvpn-lab
+  labels: { app: openvpn-server }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: openvpn-server } }
+  template:
+    metadata: { labels: { app: openvpn-server } }
+    spec:
+      initContainers:
+        - name: init-pki
+          image: kylemanna/openvpn:latest
+          securityContext:
+            privileged: true
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              cd /etc/openvpn
+              if [ ! -f /etc/openvpn/openvpn.conf ]; then
+                ovpn_genconfig -u udp://openvpn-server.openvpn-lab.svc:1194 \
+                               -N -d -D \
+                               -p "dhcp-option DNS 10.8.0.1" \
+                               -p "dhcp-option DOMAIN corp.internal"
+                # Non-interactive CA + server cert (no passphrase for the lab)
+                EASYRSA_BATCH=1 EASYRSA_REQ_CN="lab-ca" ovpn_initpki nopass
+                # Issue a client cert we'll use from the client pod
+                easyrsa build-client-full client nopass
+                ovpn_getclient client > /etc/openvpn/client.ovpn
+              fi
+          volumeMounts:
+            - { name: data, mountPath: /etc/openvpn }
+      containers:
+        - name: openvpn
+          image: kylemanna/openvpn:latest
+          command: ["/usr/local/bin/ovpn_run"]
+          ports:
+            - { name: ovpn, containerPort: 1194, protocol: UDP }
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - { name: data, mountPath: /etc/openvpn }
+        - name: sniffer
+          image: nicolaka/netshoot:latest
+          command: ["/bin/sh","-c","sleep infinity"]
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN", "NET_RAW"]
+      volumes:
+        - { name: data, persistentVolumeClaim: { claimName: openvpn-data } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openvpn-server
+  namespace: openvpn-lab
+spec:
+  selector: { app: openvpn-server }
+  ports:
+    - { name: ovpn, port: 1194, targetPort: 1194, protocol: UDP }
