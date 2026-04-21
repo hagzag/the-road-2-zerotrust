@@ -141,32 +141,6 @@ Keep your ed25519 keys. Start signing certificates. And read the next post when 
 
 ---
 
-## Social Snippets
-
-### LinkedIn
-"SSH is solved" is the most dangerous sentence in your runbook. It works on 10 hosts, scales to shadow IAM by 10,000, and turns your bastions into the crown jewels.
-
-Part 2 of my seven-part series on the evolution of remote access is live. We cover why ed25519 is the default in 2026, how `ProxyJump` replaces the agent-forwarding dance, why signed certificates are the escape hatch OpenSSH has shipped for 15 years, and the pragmatic cost of running bastions at telco scale. Every post ships a runnable k3d lab — Part 2 stands up an OpenSSH CA, a bastion, and two internal pods, so you can watch an hour-long cert auth in action.
-
-#DevOps #SSH #ZeroTrust #PlatformEngineering #Security
-
-### X (Twitter)
-"SSH is solved" is the most dangerous sentence in your runbook.
-
-Part 2 of the Zero Trust evolution series: ProxyJump, ed25519, and why static keys at fleet scale are an identity crisis in a trench coat.
-
-#DevOps #SSH #ZeroTrust
-
-### Facebook
-Part 2 of "From Trusted Wires to Zero Trust" is up. The cryptographic turn that replaced telnet — and why it's *still* the baseline 30 years in. Includes a k3d lab that stands up an OpenSSH certificate authority in about three minutes.
-
-### Instagram
-Static keys → shadow IAM. Signed certificates → rotation. The SSH post you didn't know you needed. Part 2 of 7 is live. 🔐⏱️
-
-#DevOps #SSH #ZeroTrust #PlatformEngineering #Kubernetes
-
----
-
 ## Further Reading
 
 - [OpenSSH Certificate Format](https://man.openbsd.org/ssh-keygen#CERTIFICATES) — the canonical reference
