@@ -1,0 +1,105 @@
+# Two WireGuard peers in one namespace. Each peer's wg0.conf is mounted from
+# a ConfigMap that run.sh generates after `wg genkey` produces the keypairs.
+#
+# Uses a custom Alpine image with wireguard-tools, iperf3, tcpdump, and ping
+# baked in. Runs privileged so it can create the wg0 interface.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: peer-a
+  namespace: wg-lab
+  labels:
+    app: peer-a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: peer-a
+  template:
+    metadata:
+      labels:
+        app: peer-a
+    spec:
+      containers:
+        - name: wg
+          image: wg-lab:local
+          command: ["/entrypoint.sh"]
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: wg-conf
+              mountPath: /wg
+              readOnly: true
+          ports:
+            - containerPort: 51820
+              protocol: UDP
+      volumes:
+        - name: wg-conf
+          configMap:
+            name: wg-peer-a-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: peer-a
+  namespace: wg-lab
+spec:
+  selector:
+    app: peer-a
+  ports:
+    - name: wg
+      port: 51820
+      targetPort: 51820
+      protocol: UDP
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: peer-b
+  namespace: wg-lab
+  labels:
+    app: peer-b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: peer-b
+  template:
+    metadata:
+      labels:
+        app: peer-b
+    spec:
+      containers:
+        - name: wg
+          image: wg-lab:local
+          command: ["/entrypoint.sh"]
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: wg-conf
+              mountPath: /wg
+              readOnly: true
+          ports:
+            - containerPort: 51820
+              protocol: UDP
+      volumes:
+        - name: wg-conf
+          configMap:
+            name: wg-peer-b-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: peer-b
+  namespace: wg-lab
+spec:
+  selector:
+    app: peer-b
+  ports:
+    - name: wg
+      port: 51820
+      targetPort: 51820
+      protocol: UDP
+  type: ClusterIP
