@@ -1,0 +1,82 @@
+# Part 2 — modern bastion sshd pod (the "after" picture).
+# Trusts user certs signed by the CA (TrustedUserCAKeys) and presents a
+# host cert (HostCertificate) that the client verifies against the CA
+# via @cert-authority in known_hosts. No static authorized_keys anywhere.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sshd-conf-bastion
+  namespace: ssh-ca
+data:
+  sshd_config: |
+    Port 2222
+    PasswordAuthentication no
+    ChallengeResponseAuthentication no
+    KbdInteractiveAuthentication no
+    PermitRootLogin no
+    PubkeyAuthentication yes
+    TrustedUserCAKeys /etc/ssh/ca-user.pub
+    AuthorizedPrincipalsFile /etc/ssh/auth_principals/%u
+    HostKey /etc/ssh/ssh_host_ed25519_key
+    HostCertificate /etc/ssh/ssh_host_ed25519_key-cert.pub
+    KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org
+    Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com
+    MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+    LogLevel VERBOSE
+    Subsystem sftp /usr/lib/ssh/sftp-server
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: principals-bastion
+  namespace: ssh-ca
+data:
+  demo: |
+    demo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bastion
+  namespace: ssh-ca
+  labels: { app: bastion }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: bastion } }
+  template:
+    metadata:
+      labels: { app: bastion }
+    spec:
+      containers:
+        - name: sshd
+          image: ssh-ca-sshd:latest
+          imagePullPolicy: Never
+          env:
+            - { name: PUID, value: "1000" }
+            - { name: PGID, value: "1000" }
+            - { name: USER_NAME, value: "demo" }
+          ports:
+            - { name: ssh, containerPort: 2222 }
+          volumeMounts:
+            - { name: sshd-conf, mountPath: /mnt/sshd-config, readOnly: true }
+            - { name: ca-keys, mountPath: /etc/ssh/ca-user.pub, subPath: ca-user.pub }
+            - { name: host-key, mountPath: /etc/ssh/ssh_host_ed25519_key, subPath: ssh_host_ed25519_key }
+            - { name: host-key, mountPath: /etc/ssh/ssh_host_ed25519_key.pub, subPath: ssh_host_ed25519_key.pub }
+            - { name: host-key, mountPath: /etc/ssh/ssh_host_ed25519_key-cert.pub, subPath: ssh_host_ed25519_key-cert.pub }
+            - { name: principals, mountPath: /mnt/principals, readOnly: true }
+      volumes:
+        - { name: sshd-conf, configMap: { name: sshd-conf-bastion } }
+        - { name: ca-keys, secret: { secretName: ssh-ca-pub } }
+        - { name: host-key, secret: { secretName: bastion-host-key, defaultMode: 0600 } }
+        - { name: principals, configMap: { name: principals-bastion } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bastion
+  namespace: ssh-ca
+spec:
+  type: NodePort
+  selector: { app: bastion }
+  ports:
+    - { name: ssh, port: 2222, targetPort: 2222, nodePort: 32222 }

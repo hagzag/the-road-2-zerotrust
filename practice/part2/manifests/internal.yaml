@@ -1,0 +1,111 @@
+# Part 2 — two internal sshd pods reached only via ProxyJump through bastion.
+# Same cert-based auth as the bastion; no authorized_keys.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sshd-conf-internal
+  namespace: ssh-ca
+data:
+  sshd_config: |
+    Port 2222
+    PasswordAuthentication no
+    ChallengeResponseAuthentication no
+    KbdInteractiveAuthentication no
+    PermitRootLogin no
+    PubkeyAuthentication yes
+    TrustedUserCAKeys /etc/ssh/ca-user.pub
+    AuthorizedPrincipalsFile /etc/ssh/auth_principals/%u
+    HostKey /etc/ssh/ssh_host_ed25519_key
+    HostCertificate /etc/ssh/ssh_host_ed25519_key-cert.pub
+    KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org
+    Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com
+    MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+    LogLevel VERBOSE
+    Subsystem sftp /usr/lib/ssh/sftp-server
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: principals-internal
+  namespace: ssh-ca
+data:
+  demo: |
+    demo
+---
+# --- internal-a ----------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: internal-a, namespace: ssh-ca, labels: { app: internal-a } }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: internal-a } }
+  template:
+    metadata: { labels: { app: internal-a } }
+    spec:
+      containers:
+        - name: sshd
+          image: ssh-ca-sshd:latest
+          imagePullPolicy: Never
+          env:
+            - { name: PUID, value: "1000" }
+            - { name: PGID, value: "1000" }
+            - { name: USER_NAME, value: "demo" }
+          ports: [{ name: ssh, containerPort: 2222 }]
+          volumeMounts:
+            - { name: sshd-conf, mountPath: /mnt/sshd-config, readOnly: true }
+            - { name: ca-keys, mountPath: /etc/ssh/ca-user.pub, subPath: ca-user.pub }
+            - { name: host-key, mountPath: /etc/ssh/ssh_host_ed25519_key, subPath: ssh_host_ed25519_key }
+            - { name: host-key, mountPath: /etc/ssh/ssh_host_ed25519_key.pub, subPath: ssh_host_ed25519_key.pub }
+            - { name: host-key, mountPath: /etc/ssh/ssh_host_ed25519_key-cert.pub, subPath: ssh_host_ed25519_key-cert.pub }
+            - { name: principals, mountPath: /mnt/principals, readOnly: true }
+      volumes:
+        - { name: sshd-conf, configMap: { name: sshd-conf-internal } }
+        - { name: ca-keys, secret: { secretName: ssh-ca-pub } }
+        - { name: host-key, secret: { secretName: internal-a-host-key, defaultMode: 0600 } }
+        - { name: principals, configMap: { name: principals-internal } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: internal-a, namespace: ssh-ca }
+spec:
+  selector: { app: internal-a }
+  ports: [{ name: ssh, port: 2222, targetPort: 2222 }]
+---
+# --- internal-b ----------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: internal-b, namespace: ssh-ca, labels: { app: internal-b } }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: internal-b } }
+  template:
+    metadata: { labels: { app: internal-b } }
+    spec:
+      containers:
+        - name: sshd
+          image: ssh-ca-sshd:latest
+          imagePullPolicy: Never
+          env:
+            - { name: PUID, value: "1000" }
+            - { name: PGID, value: "1000" }
+            - { name: USER_NAME, value: "demo" }
+          ports: [{ name: ssh, containerPort: 2222 }]
+          volumeMounts:
+            - { name: sshd-conf, mountPath: /mnt/sshd-config, readOnly: true }
+            - { name: ca-keys, mountPath: /etc/ssh/ca-user.pub, subPath: ca-user.pub }
+            - { name: host-key, mountPath: /etc/ssh/ssh_host_ed25519_key, subPath: ssh_host_ed25519_key }
+            - { name: host-key, mountPath: /etc/ssh/ssh_host_ed25519_key.pub, subPath: ssh_host_ed25519_key.pub }
+            - { name: host-key, mountPath: /etc/ssh/ssh_host_ed25519_key-cert.pub, subPath: ssh_host_ed25519_key-cert.pub }
+            - { name: principals, mountPath: /mnt/principals, readOnly: true }
+      volumes:
+        - { name: sshd-conf, configMap: { name: sshd-conf-internal } }
+        - { name: ca-keys, secret: { secretName: ssh-ca-pub } }
+        - { name: host-key, secret: { secretName: internal-b-host-key, defaultMode: 0600 } }
+        - { name: principals, configMap: { name: principals-internal } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: internal-b, namespace: ssh-ca }
+spec:
+  selector: { app: internal-b }
+  ports: [{ name: ssh, port: 2222, targetPort: 2222 }]

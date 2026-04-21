@@ -1,0 +1,89 @@
+version: '3'
+
+set: [errexit, pipefail]
+
+tasks:
+  info:
+    desc: Print part title, blog URL, prereqs, and description
+    silent: true
+    cmds:
+      - 'echo "Part 2 — SSH Flaws and the Certificate Authority Fix"'
+      - 'echo "Blog: https://portfolio.hagzag.com/blog/ssh-and-the-cryptographic-turn/"'
+      - 'echo "Prereqs: docker, k3d, kubectl, ssh, ssh-keygen, ssh-audit"'
+      - 'echo "Description: Before/after lab — legacy SSH flaws (authorized_keys sprawl, TOFU, agent forwarding) vs CA-signed certificates with ProxyJump."'
+
+  check-prereqs:
+    desc: Check required tools are installed
+    cmds:
+      - |
+        for tool in docker k3d kubectl ssh ssh-keygen; do
+          if ! command -v $tool &> /dev/null; then
+            echo "ERROR: $tool not found"
+            echo "Install: brew install $tool (macOS) or apt install $tool (Linux)"
+            exit 1
+          fi
+        done
+        echo "All prereqs satisfied"
+
+  run:
+    desc: Execute ./run.sh after prereq check
+    deps: [check-prereqs]
+    cmds:
+      - ./run.sh
+
+  test:
+    desc: Verify the lab is working correctly (Part 2 assertions)
+    cmds:
+      - |
+        set -euo pipefail
+        fail() { echo "FAIL: $1"; exit 1; }
+        ok()   { echo "OK:   $1"; }
+
+        # 1. k3d cluster ssh-ca exists
+        k3d cluster list --no-headers 2>/dev/null | awk '{print $1}' | grep -qx "ssh-ca" || fail "cluster ssh-ca does not exist"
+        ok "cluster ssh-ca exists"
+
+        # 2. All deployments Available
+        kubectl -n ssh-ca rollout status deploy/legacy-bastion deploy/bastion deploy/internal-a deploy/internal-b --timeout=30s || fail "rollout failed"
+        ok "all deployments available"
+
+        # 3. Modern bastion reachable on port 2222
+        nc -z -w5 127.0.0.1 2222 || fail "port 2222 not reachable"
+        ok "port 2222 (modern bastion) reachable"
+
+        # 4. Legacy bastion reachable on port 2223
+        nc -z -w5 127.0.0.1 2223 || fail "port 2223 not reachable"
+        ok "port 2223 (legacy bastion) reachable"
+
+        # 5. User cert exists and contains principal demo
+        test -f ./out/id_ed25519-cert.pub || fail "user cert not found"
+        ssh-keygen -L -f ./out/id_ed25519-cert.pub | grep -q 'demo' || fail "principal 'demo' not in cert"
+        ok "user cert has principal demo"
+
+        # 6. SSH to modern bastion succeeds with cert
+        ssh -F ./out/ssh_config -o BatchMode=yes -o ConnectTimeout=10 bastion true || fail "SSH to modern bastion failed"
+        ok "SSH to modern bastion succeeds (cert auth)"
+
+        # 7. SSH to legacy bastion succeeds with static key
+        ssh -F ./out/ssh_config -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new legacy-bastion true || fail "SSH to legacy bastion failed"
+        ok "SSH to legacy bastion succeeds (static key)"
+
+        # 8. ProxyJump through bastion to internal-a
+        ssh -F ./out/ssh_config -o BatchMode=yes -o ConnectTimeout=15 internal-a true || fail "SSH to internal-a via ProxyJump failed"
+        ok "ProxyJump to internal-a succeeds"
+
+        # 9. Legacy bastion has agent forwarding enabled
+        kubectl -n ssh-ca exec deploy/legacy-bastion -- grep -q "AllowAgentForwarding yes" /etc/ssh/sshd_config || fail "legacy bastion missing AllowAgentForwarding"
+        ok "legacy bastion has agent forwarding enabled"
+
+        # 10. Modern bastion does NOT have agent forwarding
+        ! kubectl -n ssh-ca exec deploy/bastion -- grep -q "AllowAgentForwarding" /etc/ssh/sshd_config || fail "modern bastion should NOT have AllowAgentForwarding"
+        ok "modern bastion has no agent forwarding"
+
+        echo ""
+        echo "=== All Part 2 tests passed ==="
+
+  cleanup:
+    desc: Execute ./cleanup.sh
+    cmds:
+      - ./cleanup.sh
