@@ -1,47 +1,43 @@
-# The Road to Zero Trust
+# The Road to Zero Trust — Companion Labs
 
-> *From Trusted Wires to Zero Trust: A Practitioner's Evolution of Remote Access*
+Hands-on k3d labs for the blog series **"From Trusted Wires to Zero Trust: A Practitioner's Evolution of Remote Access"** by [Haggai Philip Zagury (HagZag)](https://portfolio.hagzag.com).
 
-A 7-part blog series by [Haggai Philip Zagury](https://github.com/hagzag) tracing the full arc of remote access — from ARPANET cleartext to Zero Trust Networking — with k3d labs you can actually run.
+Every post in the series ships a self-contained lab here. Labs run locally on [`k3d`](https://k3d.io) — no cloud account needed — so you can sniff packets, break things, and see for yourself why each evolution of remote access happened.
 
-## The Series
+## Layout
 
-| # | Title | Core tech |
-|---|-------|-----------|
-| 1 | From Trusted Wires to the Open Internet | Telnet/rsh/rlogin, ARPANET, hosts.txt → DNS |
-| 2 | SSH and the Cryptographic Turn | SSH, bastions, SSH CAs, SSHFP |
-| 3 | VPNs: OpenVPN, IPsec, and the TLS Tunnel | OpenVPN, IPsec/IKEv2, DPI fingerprinting |
-| 4 | WireGuard: Why Simpler Won | WireGuard, mesh overlays (Tailscale/Headscale) |
-| 5 | Identity Is the New Perimeter | OIDC/OAuth/SAML, MFA, FIDO2, DevOps identity |
-| 6 | Zero Trust Networking: Identity Meets the Network | ZTNA, Cloudflare Access, Pomerium, device posture |
-| 7 | Compliance, Cloud, and Consulting from Anywhere | SOC 2/FIPS/FedRAMP, hyperscaler ZT offerings |
+```
+practice/
+├── part1/   From Trusted Wires to the Open Internet
+├── part2/   SSH and the Cryptographic Turn
+├── part3/   VPNs: OpenVPN, IPsec, and the TLS Tunnel
+├── part4/   WireGuard: Why Simpler Won
+├── part5/   Identity Is the New Perimeter (AuthN/AuthZ/MFA)
+├── part6/   Zero Trust Networking: Identity Meets the Network
+├── part7/   Compliance, Cloud, and Consulting from Anywhere  (no lab)
+<!-- └── part8/   Epilogue: The Reverse Tunnel (ngrok / cloudflared / frp) -->
+```
 
-Posts publish in order. No backdating.
+Each `practice/partN/` contains a `README.md`, Kubernetes manifests, and a `run.sh` / `cleanup.sh` pair.
 
-## Four Threads Running Through Every Post
+## Prereqs (once, for the whole series)
 
-- **OSI ladder** — every technology explicitly placed on its layer(s)
-- **Trust-boundary migration** — physical → network → host → identity
-- **DNS as connective tissue** — naming, discovery, leaks, and policy enforcement at each era
-- **Anchor client story** — one anonymized real engagement per post
+- Docker
+- [`k3d`](https://k3d.io) ≥ v5
+- `kubectl` ≥ v1.28
+- Wireshark (or `tshark`) for the packet-capture labs
 
-## Practice
+## Posts
 
-Hands-on labs live under `practice/`. Each part has its own folder with a `README.md` (step-by-step guide) and runnable scripts.
-
-| Part | Lab | What you build |
-|------|-----|----------------|
-| 1 | [practice/part1](./practice/part1/) | Telnet + tcpdump sniffer pod — read your own credentials in cleartext |
-
-Labs build on each other. Part 1's k3d cluster (`trusted-wire`) is reused in Part 2.
-
-Prerequisites: `k3d`, `kubectl`, `wireshark`/`tshark`. Parts 4+ also need `iperf3`.
-
-## Cross-posted to
-
-- [Medium](https://medium.com/@hagzag23)
-- Hugo static site
+1. **[From Trusted Wires to the Open Internet](https://hagzag23.medium.com/from-trusted-wires-to-the-open-internet-43dfe7807d28)** — lab: [`practice/part1/`](./practice/part1/)
+2. **[SSH and the Cryptographic Turn](https://portfolio.hagzag.com/blog/ssh-and-the-cryptographic-turn/)** — lab: [`practice/part2/`](./practice/part2/)
+3. **[VPNs: OpenVPN, IPsec, and the TLS Tunnel](https://portfolio.hagzag.com/blog/vpns-openvpn-ipsec-and-the-tls-tunnel/)** — lab: [`practice/part3/`](./practice/part3/)
+4. **WireGuard: Why Simpler Won** — lab: [`practice/part4/`](./practice/part4/)
+5. **Identity Is the New Perimeter** — lab: [`practice/part5/`](./practice/part5/)
+6. **Zero Trust Networking: Identity Meets the Network** — lab: [`practice/part6/`](./practice/part6/)
+7. **Compliance, Cloud, and Consulting from Anywhere** — retrospective finale (no lab)
+<!-- 8. **The Reverse Tunnel (Epilogue)** — ngrok / Cloudflare Tunnel / frp — lab: [`practice/part8/`](./practice/part8/) -->
 
 ## License
 
-Content © Haggai Philip Zagury. Labs and code snippets MIT.
+Labs are MIT-licensed unless noted otherwise. The blog text itself is © Haggai Philip Zagury and is cross-posted on [Medium](https://hagzag23.medium.com) and [portfolio.hagzag.com](https://portfolio.hagzag.com).

@@ -1,0 +1,167 @@
+version: '3'
+
+includes:
+  part1:
+    taskfile: ./practice/part1/Taskfile.yaml
+    dir: ./practice/part1
+  part2:
+    taskfile: ./practice/part2/Taskfile.yaml
+    dir: ./practice/part2
+  part3:
+    taskfile: ./practice/part3/Taskfile.yaml
+    dir: ./practice/part3
+  part4:
+    taskfile: ./practice/part4/Taskfile.yaml
+    dir: ./practice/part4
+  part5:
+    taskfile: ./practice/part5/Taskfile.yaml
+    dir: ./practice/part5
+  part6:
+    taskfile: ./practice/part6/Taskfile.yaml
+    dir: ./practice/part6
+
+tasks:
+  default:
+    desc: Show all parts and available tasks
+    cmds:
+      - task: list
+
+  list:
+    desc: Print table of all parts with descriptions and available tasks
+    silent: true
+    cmds:
+      - |
+        echo "========================================"
+        echo "The Road to Zero Trust - Lab Parts"
+        echo "========================================"
+        echo ""
+        echo "| Part | Title | Description |"
+        echo "|------|-------|-------------|"
+        echo "| 1 | Trusted Wires | Capture telnet password in pcap |"
+        echo "| 2 | SSH CA | SSH certificate authority with ProxyJump |"
+        echo "| 3 | VPNs | OpenVPN with DPI fingerprinting |"
+        echo "| 4 | WireGuard | Peer handshake and bench testing |"
+        echo "| 5 | Identity | Keycloak + oauth2-proxy + OIDC + PKCE |"
+        echo "| 6 | Zero Trust | ZTNA with identity-aware proxy |"
+        echo ""
+        echo "========================================"
+        echo "Available Tasks (from repo root)"
+        echo "========================================"
+        echo "task list              - Show this table"
+        echo "task check-tools      - Verify prereqs for all parts"
+        echo "task part1:info       - Print part 1 info"
+        echo "task part1:run        - Run part 1 lab"
+        echo "task part1:cleanup    - Clean up part 1"
+        echo "task part2:info       - Print part 2 info"
+        echo "task part2:run        - Run part 2 lab"
+        echo "task part2:cleanup    - Clean up part 2"
+        echo "task part3:info       - Print part 3 info"
+        echo "task part3:run        - Run part 3 lab"
+        echo "task part3:capture    - Capture VPN traffic"
+        echo "task part3:classify   - Run classifier on pcap"
+        echo "task part3:cleanup    - Clean up part 3"
+        echo "task part4:info       - Print part 4 info"
+        echo "task part4:run        - Run part 4 lab"
+        echo "task part4:bench      - Run WireGuard benchmark"
+        echo "task part4:capture    - Capture WireGuard handshake"
+        echo "task part4:cleanup    - Clean up part 4"
+        echo "task part5:info       - Print part 5 info"
+        echo "task part5:run        - Run part 5 lab"
+        echo "task part5:bootstrap-realm - Bootstrap Keycloak realm"
+        echo "task part5:decode-token    - Decode JWT token"
+        echo "task part5:cleanup    - Clean up part 5"
+        echo "task part6:info       - Print part 6 info"
+        echo "task part6:run        - Run part 6 lab"
+        echo "task part6:bootstrap-realm - Bootstrap Keycloak realm"
+        echo "task part6:lateral-move    - Run lateral move demo"
+        echo "task part6:cleanup    - Clean up part 6"
+        echo "task all:run          - Run all parts in order"
+        echo ""
+
+  check-tools:
+    desc: Verify tools needed across all parts are installed
+    cmds:
+      - |
+        echo "Checking required tools..."
+        MISSING=""
+        
+        if ! command -v docker &> /dev/null; then
+          echo "MISSING: docker"
+          echo "  Install: brew install docker (macOS) or apt install docker.io (Linux)"
+          MISSING=1
+        fi
+        
+        if ! command -v k3d &> /dev/null; then
+          echo "MISSING: k3d"
+          echo "  Install: brew install k3d (macOS) or see https://k3d.io"
+          MISSING=1
+        fi
+        
+        if ! command -v kubectl &> /dev/null; then
+          echo "MISSING: kubectl"
+          echo "  Install: brew install kubectl (macOS) or apt install kubectl (Linux)"
+          MISSING=1
+        fi
+        
+        if ! command -v ssh &> /dev/null; then
+          echo "MISSING: ssh"
+          echo "  Install: brew install openssh (macOS) or apt install openssh-client (Linux)"
+          MISSING=1
+        fi
+        
+        if ! command -v ssh-keygen &> /dev/null; then
+          echo "MISSING: ssh-keygen"
+          echo "  Install: brew install openssh (macOS) or apt install openssh-client (Linux)"
+          MISSING=1
+        fi
+        
+        if ! command -v wg &> /dev/null; then
+          echo "MISSING: wg (wireguard-tools)"
+          echo "  Install: brew install wireguard-tools (macOS) or apt install wireguard-tools (Linux)"
+          MISSING=1
+        fi
+        
+        if ! command -v python3 &> /dev/null; then
+          echo "MISSING: python3"
+          echo "  Install: brew install python3 (macOS) or apt install python3 (Linux)"
+          MISSING=1
+        fi
+        
+        if ! command -v tshark &> /dev/null && ! command -v wireshark &> /dev/null; then
+          echo "MISSING: tshark or wireshark"
+          echo "  Install: brew install wireshark (macOS) or apt install tshark (Linux)"
+          MISSING=1
+        fi
+        
+        if ! command -v jq &> /dev/null; then
+          echo "MISSING: jq"
+          echo "  Install: brew install jq (macOS) or apt install jq (Linux)"
+          MISSING=1
+        fi
+        
+        if ! command -v curl &> /dev/null; then
+          echo "MISSING: curl"
+          echo "  Install: brew install curl (macOS) or apt install curl (Linux)"
+          MISSING=1
+        fi
+        
+        if [ -n "$MISSING" ]; then
+          echo ""
+          echo "Some tools are missing. Please install them before running labs."
+          exit 1
+        fi
+        
+        echo "All required tools are installed!"
+
+  all:run:
+    desc: Run all parts in order (1 through 6)
+    deps: [check-tools]
+    cmds:
+      - echo "Running all parts in order..."
+      - task: part1:run
+      - task: part2:run
+      - task: part3:run
+      - task: part4:run
+      - task: part5:run
+      - task: part6:run
+      - echo "All parts completed!"

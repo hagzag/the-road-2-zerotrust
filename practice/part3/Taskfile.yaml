@@ -8,7 +8,7 @@ tasks:
     silent: true
     cmds:
       - 'echo "Part 3 — OpenVPN in k3d, plus a DPI Fingerprinter"'
-      - 'echo "Blog: https://portfolio.hagzag.com/blog/vpns-openvpn-ipsec-and-the-tls-tunnel/"'
+      - 'echo "Blog: https://portfolio.hagzag.com/blog/reading-lists/path2zerotrust/2026-04-20-vpns-openvpn-ipsec-and-the-tls-tunnel/"'
       - 'echo "Prereqs: docker, k3d, kubectl, python3, scapy, tcpdump"'
       - 'echo "Description: OpenVPN in k3d with DPI fingerprinting classifier - detect OpenVPN by opcode analysis."'
 

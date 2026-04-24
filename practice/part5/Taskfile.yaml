@@ -1,0 +1,89 @@
+version: '3'
+
+set: [errexit, pipefail]
+
+tasks:
+  info:
+    desc: Print part title, blog URL, prereqs, and description
+    silent: true
+    cmds:
+      - 'echo "Part 5 — Identity Is the New Perimeter"'
+      - 'echo "Blog: https://portfolio.hagzag.com/blog/reading-lists/path2zerotrust/2026-04-20-identity-is-the-new-perimeter/"'
+      - 'echo "Prereqs: docker, k3d, kubectl, jq"'
+      - 'echo "Description: Keycloak + oauth2-proxy + OIDC flow with PKCE - identity as the new perimeter."'
+
+  check-prereqs:
+    desc: Check required tools are installed
+    cmds:
+      - |
+        for tool in docker k3d kubectl jq; do
+          if ! command -v $tool &> /dev/null; then
+            echo "ERROR: $tool not found"
+            echo "Install: brew install $tool (macOS) or apt install $tool (Linux)"
+            exit 1
+          fi
+        done
+        echo "All prereqs satisfied"
+
+  run:
+    desc: Execute ./run.sh after prereq check
+    deps: [check-prereqs]
+    cmds:
+      - ./run.sh
+
+  bootstrap-realm:
+    desc: Execute ./bootstrap-realm.sh to seed Keycloak realm (auto-run by run.sh)
+    cmds:
+      - ./bootstrap-realm.sh
+
+  decode-token:
+    desc: Execute ./decode-token.sh to decode JWT token
+    cmds:
+      - ./decode-token.sh
+
+  test:
+    desc: Verify the lab is working correctly (Part 5 assertions)
+    cmds:
+      - |
+        set -euo pipefail
+        fail() { echo "FAIL: $1"; exit 1; }
+        ok()   { echo "OK:   $1"; }
+
+        # 1. k3d cluster auth-lab exists
+        k3d cluster list --no-headers 2>/dev/null | awk '{print $1}' | grep -qx "auth-lab" || fail "cluster auth-lab does not exist"
+        ok "cluster auth-lab exists"
+
+        # 2. All deployments available
+        kubectl -n auth-lab rollout status deploy/postgres deploy/keycloak deploy/demo-app deploy/oauth2-proxy --timeout=30s || fail "rollout failed"
+        ok "all deployments available"
+
+        # 3. Keycloak health responds (Keycloak image has no curl; use bash /dev/tcp HTTP check)
+        HTTP=$(kubectl -n auth-lab exec deploy/keycloak -- /bin/bash -c \
+          'exec 3<>/dev/tcp/localhost/8080; echo -e "GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3; timeout 2 cat <&3' 2>/dev/null | head -1)
+        echo "$HTTP" | grep -q "200" || fail "Keycloak health check failed (got: $HTTP)"
+        ok "Keycloak health check passes"
+
+        # 4. Realm bootstrapped (marker file)
+        test -f ./out/realm-bootstrapped || fail "realm not bootstrapped (run 'task run' first)"
+        ok "realm bootstrapped (marker exists)"
+
+        # 5. User haggai exists in realm lab (use kcadm.sh — no curl in Keycloak)
+        USER_CHECK=$(kubectl -n auth-lab exec deploy/keycloak -- /bin/sh -c '
+          KCADM=/opt/keycloak/bin/kcadm.sh
+          $KCADM config credentials --server http://localhost:8080 --realm master --user admin --password Pa55w0rd --config /tmp/test-kcadm.config >/dev/null 2>&1
+          $KCADM get users -r lab --fields username --format csv --config /tmp/test-kcadm.config 2>/dev/null | grep haggai || true
+        ')
+        echo "$USER_CHECK" | grep -q "haggai" || fail "user haggai not found in realm lab"
+        ok "user haggai exists in realm lab"
+
+        # 6. oauth2-proxy /ping responds (distroless image — use demo-app's wget)
+        kubectl -n auth-lab exec deploy/demo-app -- wget -qO- http://oauth2-proxy.auth-lab.svc.cluster.local:4180/ping 2>/dev/null | grep -qi "ok" || fail "oauth2-proxy /ping failed"
+        ok "oauth2-proxy /ping responds"
+
+        echo ""
+        echo "=== All Part 5 tests passed ==="
+
+  cleanup:
+    desc: Execute ./cleanup.sh
+    cmds:
+      - ./cleanup.sh

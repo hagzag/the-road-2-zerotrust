@@ -1,0 +1,45 @@
+version: '3'
+
+tasks:
+  info:
+    desc: Print part title, blog URL, prereqs, and description
+    cmds:
+      - 'echo "Part 6 — Zero Trust Networking: Identity Meets the Network"'
+      - 'echo "Blog: https://portfolio.hagzag.com/blog/zero-trust-networking-identity-meets-the-network/"'
+      - 'echo "Prereqs: docker, k3d, kubectl, jq, curl"'
+      - 'echo """'
+      - 'echo "Description: ZTNA-style stack with identity-aware proxy - identity meets the network."'
+
+  check-prereqs:
+    desc: Check required tools are installed
+    cmds:
+      - |
+        for tool in docker k3d kubectl jq curl; do
+          if ! command -v $tool &> /dev/null; then
+            echo "ERROR: $tool not found"
+            echo "Install: brew install $tool (macOS) or apt install $tool (Linux)"
+            exit 1
+          fi
+        done
+        echo "All prereqs satisfied"
+
+  run:
+    desc: Execute ./run.sh after prereq check
+    deps: [check-prereqs]
+    cmds:
+      - ./run.sh
+
+  bootstrap-realm:
+    desc: Execute ./bootstrap-realm.sh to seed Keycloak realm
+    cmds:
+      - ./bootstrap-realm.sh
+
+  lateral-move:
+    desc: Execute ./lateral-move.sh to demonstrate IP != access
+    cmds:
+      - ./lateral-move.sh
+
+  cleanup:
+    desc: Execute ./cleanup.sh
+    cmds:
+      - ./cleanup.sh

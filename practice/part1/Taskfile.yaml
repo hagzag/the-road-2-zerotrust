@@ -5,7 +5,7 @@ tasks:
     desc: Print part title, blog URL, prereqs, and description
     cmds:
       - 'echo "Part 1 — Trusted Wires: Capture Your Own telnet Password"'
-      - 'echo "Blog: https://portfolio.hagzag.com/blog/from-trusted-wires-to-the-open-internet/"'
+      - 'echo "Blog: https://portfolio.hagzag.com/blog/reading-lists/path2zerotrust/2026-04-20-from-trusted-wires-to-the-open-internet/"'
       - 'echo "Prereqs: docker, k3d, kubectl, tshark (or wireshark)"'
       - 'echo ""'
       - 'echo "Description: Capture telnet password in pcap using k3d and tcpdump to see cleartext credentials on the wire."'

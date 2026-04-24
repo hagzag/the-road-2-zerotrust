@@ -8,7 +8,7 @@ tasks:
     silent: true
     cmds:
       - 'echo "Part 2 — SSH Flaws and the Certificate Authority Fix"'
-      - 'echo "Blog: https://portfolio.hagzag.com/blog/ssh-and-the-cryptographic-turn/"'
+      - 'echo "Blog: https://portfolio.hagzag.com/blog/reading-lists/path2zerotrust/2026-04-20-ssh-and-the-cryptographic-turn/"'
       - 'echo "Prereqs: docker, k3d, kubectl, ssh, ssh-keygen, ssh-audit"'
       - 'echo "Description: Before/after lab — legacy SSH flaws (authorized_keys sprawl, TOFU, agent forwarding) vs CA-signed certificates with ProxyJump."'
 

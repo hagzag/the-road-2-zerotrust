@@ -8,7 +8,7 @@ tasks:
     silent: true
     cmds:
       - 'echo "Part 4 — WireGuard: Why Simpler Won"'
-      - 'echo "Blog: https://portfolio.hagzag.com/blog/wireguard-why-simpler-won/"'
+      - 'echo "Blog: https://portfolio.hagzag.com/blog/reading-lists/path2zerotrust/2026-04-20-wireguard-why-simpler-won/"'
       - 'echo "Prereqs: docker, k3d, kubectl, wg"'
       - 'echo "Description: WireGuard peers handshake and bench testing - simpler than OpenVPN."'
 
